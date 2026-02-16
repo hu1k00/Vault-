@@ -1,0 +1,18 @@
+sudo apt update && sudo apt upgrade -y
+
+sudo apt install docker.io -y
+
+sudo systemctl start docker
+sudo systemctl enable docker
+
+sudo systemctl status docker
+
+🔒 Allow Your User to Run Docker (No sudo)
+
+    sudo usermod -aG docker $USER
+
+docker run hello-world
+
+
+docker --version
+docker ps

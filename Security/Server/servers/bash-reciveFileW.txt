@@ -1,0 +1,18 @@
+Invoke-WebRequest -Uri "http://192.168.1.10:8000/info.txt" -OutFile "info.txt"
+
+curl http://192.168.1.10:8000/info.txt -o $env:USERPROFILE\Desktop\info.txt
+
+$wc = New-Object System.Net.WebClient
+$wc.DownloadFile("http://192.168.1.10:8000/info.txt", "$env:USERPROFILE\Desktop\info.txt")
+
+certutil -urlcache -f http://192.168.1.10:8000/info.txt %USERPROFILE%\Desktop\info.txt
+
+
+iwr "http://192.168.1.10:8000/info.txt" -OutFile "C:\Users\amr\Desktop\info.txt"
+
+iwr "http://192.168.1.10:8000/info.txt" -OutFile "C:\Users\amr\Documents\info.txt"
+
+curl http://192.168.1.10:8000/info.txt -o C:\Users\amr\Desktop\info.txt
+
+certutil -urlcache -f http://192.168.1.10:8000/info.txt C:\Users\amr\Desktop\info.txt
+

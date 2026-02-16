@@ -1,0 +1,1 @@
+zip -r my-folder.zip my-folder

@@ -1,0 +1,15 @@
+✅ Method 1 — Fastest (Built-in PHP Server)
+
+If PHP is installed, just run:
+
+php -S 0.0.0.0:8000
+
+
+Now open:
+
+http://localhost:8000
+
+
+Or from another machine:
+
+http://YOUR-IP:8000

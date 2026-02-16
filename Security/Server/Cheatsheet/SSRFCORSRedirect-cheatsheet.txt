@@ -1,0 +1,1 @@
+https://portswigger.net/web-security/ssrf/url-validation-bypass-cheat-sheet

