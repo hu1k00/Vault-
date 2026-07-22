@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Active Directory Red Team Methodology & Checklist</title>
+
+<style>
+body {
+    font-family: Arial, sans-serif;
+    max-width: 1400px;
+    margin: auto;
+    padding: 20px;
+    background: #f5f5f5;
+    color: #222;
+}
+
+h1 {
+    text-align: center;
+    color: #b30000;
+}
+
+h2 {
+    background: #222;
+    color: white;
+    padding: 10px;
+    border-radius: 5px;
+}
+
+h3 {
+    color: #444;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+}
+
+table, th, td {
+    border: 1px solid #ccc;
+}
+
+th {
+    background: #333;
+    color: white;
+}
+
+th, td {
+    padding: 8px;
+    text-align: left;
+}
+
+.section {
+    background: white;
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+}
+
+.checklist li {
+    margin-bottom: 8px;
+}
+
+.flow {
+    background: #111;
+    color: #00ff00;
+    padding: 15px;
+    font-family: monospace;
+    border-radius: 5px;
+    white-space: pre;
+}
+</style>
+</head>
+
+<body>
+
+<h1>Active Directory Red Team Methodology & Checklist</h1>
+
+<div class="section">
+
+<h2>Purpose</h2>
+
+<p>
+This document provides a structured methodology for conducting
+Active Directory assessments and red team engagements.
+</p>
+
+</div>
+
+<div class="section">
+
+<h2>Acronyms</h2>
+
+<table>
+<tr>
+<th>Acronym</th>
+<th>Full Name</th>
+</tr>
+
+<tr><td>AD</td><td>Active Directory</td></tr>
+<tr><td>DC</td><td>Domain Controller</td></tr>
+<tr><td>DA</td><td>Domain Admin</td></tr>
+<tr><td>EA</td><td>Enterprise Admin</td></tr>
+<tr><td>OU</td><td>Organizational Unit</td></tr>
+<tr><td>GPO</td><td>Group Policy Object</td></tr>
+<tr><td>ACL</td><td>Access Control List</td></tr>
+<tr><td>ACE</td><td>Access Control Entry</td></tr>
+<tr><td>SPN</td><td>Service Principal Name</td></tr>
+<tr><td>KDC</td><td>Key Distribution Center</td></tr>
+<tr><td>TGT</td><td>Ticket Granting Ticket</td></tr>
+<tr><td>TGS</td><td>Ticket Granting Service</td></tr>
+<tr><td>RBCD</td><td>Resource-Based Constrained Delegation</td></tr>
+<tr><td>AD CS</td><td>Active Directory Certificate Services</td></tr>
+<tr><td>PKI</td><td>Public Key Infrastructure</td></tr>
+<tr><td>CA</td><td>Certificate Authority</td></tr>
+<tr><td>ESC</td><td>Enterprise Security Configuration Abuse Path</td></tr>
+<tr><td>LDAP</td><td>Lightweight Directory Access Protocol</td></tr>
+<tr><td>LDAPS</td><td>LDAP over TLS</td></tr>
+<tr><td>SMB</td><td>Server Message Block</td></tr>
+<tr><td>RDP</td><td>Remote Desktop Protocol</td></tr>
+<tr><td>WMI</td><td>Windows Management Instrumentation</td></tr>
+<tr><td>WinRM</td><td>Windows Remote Management</td></tr>
+<tr><td>LAPS</td><td>Local Administrator Password Solution</td></tr>
+<tr><td>DCSync</td><td>Directory Replication Attack</td></tr>
+<tr><td>DCShadow</td><td>Rogue Domain Controller Replication Attack</td></tr>
+<tr><td>ADFS</td><td>Active Directory Federation Services</td></tr>
+<tr><td>OWA</td><td>Outlook Web Access</td></tr>
+<tr><td>VPN</td><td>Virtual Private Network</td></tr>
+
+</table>
+
+</div>
+
+<div class="section">
+
+<h2>Engagement Flow</h2>
+
+<div class="flow">
+Initial Access
+      ↓
+Enumeration
+      ↓
+Attack Path Mapping
+      ↓
+Credential Access
+      ↓
+Privilege Escalation
+      ↓
+Lateral Movement
+      ↓
+Domain Escalation
+      ↓
+Persistence
+      ↓
+Objectives
+</div>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 1 - Initial Access</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> ASN Enumeration</li>
+<h6>shodan search "asn:AS15169" || curl https://api.bgpview.io/asn/15169 || whois -h whois.radb.net -- '-i origin AS15169' || amass intel -asn 15169</h6>
+<li><input type="checkbox"> Subdomain Enumeration</li>
+<li><input type="checkbox"> DNS Enumeration</li>
+<li><input type="checkbox"> Certificate Transparency Logs</li>
+<h6>https://crt.sh/ {%.example.com} </h6>
+<li><input type="checkbox"> Email Discovery</li>
+<li><input type="checkbox"> Employee Discovery</li>
+<li><input type="checkbox"> VPN Assessment</li>
+<li><input type="checkbox"> OWA Assessment</li>
+<li><input type="checkbox"> ADFS Assessment</li>
+<li><input type="checkbox"> Password Spraying</li>
+<li><input type="checkbox"> Credential Stuffing</li>
+<li><input type="checkbox"> MFA Assessment</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 2 - Enumeration</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> Forest Enumeration</li>
+<li><input type="checkbox"> Domain Enumeration</li>
+<li><input type="checkbox"> Domain Controllers</li>
+<li><input type="checkbox"> Users</li>
+<li><input type="checkbox"> Groups</li>
+<li><input type="checkbox"> Computers</li>
+<li><input type="checkbox"> OUs</li>
+<li><input type="checkbox"> Service Accounts</li>
+<li><input type="checkbox"> Shares</li>
+<li><input type="checkbox"> GPOs</li>
+<li><input type="checkbox"> Trusts</li>
+<li><input type="checkbox"> Sessions</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 3 - Credential Access</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> Kerberoasting</li>
+<li><input type="checkbox"> AS-REP Roasting</li>
+<li><input type="checkbox"> LSASS Dumping</li>
+<li><input type="checkbox"> SAM Extraction</li>
+<li><input type="checkbox"> LSA Secrets</li>
+<li><input type="checkbox"> Browser Credentials</li>
+<li><input type="checkbox"> DPAPI Secrets</li>
+<li><input type="checkbox"> KeePass Databases</li>
+<li><input type="checkbox"> Service Account Credentials</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 4 - ACL Abuse</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> GenericAll</li>
+<li><input type="checkbox"> GenericWrite</li>
+<li><input type="checkbox"> WriteOwner</li>
+<li><input type="checkbox"> WriteDACL</li>
+<li><input type="checkbox"> ForceChangePassword</li>
+<li><input type="checkbox"> AddMember</li>
+<li><input type="checkbox"> DCSync Rights</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 5 - Delegation Attacks</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> Unconstrained Delegation</li>
+<li><input type="checkbox"> Constrained Delegation</li>
+<li><input type="checkbox"> Resource-Based Constrained Delegation (RBCD)</li>
+<li><input type="checkbox"> PrinterBug</li>
+<li><input type="checkbox"> PetitPotam</li>
+<li><input type="checkbox"> Shadow Credentials</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 6 - AD CS</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> ESC1</li>
+<li><input type="checkbox"> ESC2</li>
+<li><input type="checkbox"> ESC3</li>
+<li><input type="checkbox"> ESC4</li>
+<li><input type="checkbox"> ESC5</li>
+<li><input type="checkbox"> ESC6</li>
+<li><input type="checkbox"> ESC7</li>
+<li><input type="checkbox"> ESC8</li>
+<li><input type="checkbox"> ESC9</li>
+<li><input type="checkbox"> ESC10</li>
+<li><input type="checkbox"> ESC11</li>
+<li><input type="checkbox"> ESC13</li>
+<li><input type="checkbox"> ESC15</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 7 - Lateral Movement</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> SMB</li>
+<li><input type="checkbox"> PsExec</li>
+<li><input type="checkbox"> WMI</li>
+<li><input type="checkbox"> WinRM</li>
+<li><input type="checkbox"> RDP</li>
+<li><input type="checkbox"> MSSQL Linked Servers</li>
+<li><input type="checkbox"> SQL Agent Jobs</li>
+<li><input type="checkbox"> xp_cmdshell</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 8 - Domain Dominance</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> DCSync</li>
+<li><input type="checkbox"> DCShadow</li>
+<li><input type="checkbox"> Golden Ticket</li>
+<li><input type="checkbox"> Silver Ticket</li>
+<li><input type="checkbox"> SID History Abuse</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 9 - Persistence</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> Golden Ticket</li>
+<li><input type="checkbox"> Silver Ticket</li>
+<li><input type="checkbox"> Shadow Credentials</li>
+<li><input type="checkbox"> AdminSDHolder</li>
+<li><input type="checkbox"> GPO Backdoor</li>
+<li><input type="checkbox"> Malicious ACLs</li>
+<li><input type="checkbox"> Scheduled Tasks</li>
+<li><input type="checkbox"> WMI Event Consumers</li>
+</ul>
+
+</div>
+
+<div class="section">
+
+<h2>Phase 10 - Objectives</h2>
+
+<ul class="checklist">
+<li><input type="checkbox"> Sensitive Shares</li>
+<li><input type="checkbox"> Financial Data</li>
+<li><input type="checkbox"> HR Data</li>
+<li><input type="checkbox"> Source Code</li>
+<li><input type="checkbox"> Domain Compromise</li>
+<li><input type="checkbox"> Tier-0 Compromise</li>
+<li><input type="checkbox"> CA Compromise</li>
+<li><input type="checkbox"> Trust Compromise</li>
+</ul>
+
+</div>
+
+</body>
+</html>

